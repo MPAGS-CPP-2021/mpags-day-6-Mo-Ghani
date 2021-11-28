@@ -4,6 +4,7 @@
 #include "CipherType.hpp"
 #include "PlayfairCipher.hpp"
 #include "VigenereCipher.hpp"
+#include "Exceptions.hpp"
 
 #include <memory>
 #include <string>
@@ -14,7 +15,6 @@ std::unique_ptr<Cipher> cipherFactory(const CipherType type,
     switch (type) {
         case CipherType::Caesar:
             return std::make_unique<CaesarCipher>(key);
-
         case CipherType::Playfair:
             return std::make_unique<PlayfairCipher>(key);
 

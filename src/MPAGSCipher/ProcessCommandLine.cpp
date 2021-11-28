@@ -1,4 +1,5 @@
 #include "ProcessCommandLine.hpp"
+#include "Exceptions.hpp"
 
 #include <iostream>
 #include <string>
@@ -26,11 +27,7 @@ bool processCommandLine(const std::vector<std::string>& cmdLineArgs,
             // Handle input file option
             // Next element is filename unless "-i" is the last argument
             if (i == nCmdLineArgs - 1) {
-                std::cerr << "[error] -i requires a filename argument"
-                          << std::endl;
-                // Set the flag to indicate the error and terminate the loop
-                processStatus = false;
-                break;
+                throw MissingArgument("-i requires an argument");
             } else {
                 // Got filename, so assign value and advance past it
                 settings.inputFile = cmdLineArgs[i + 1];
@@ -40,11 +37,7 @@ bool processCommandLine(const std::vector<std::string>& cmdLineArgs,
             // Handle output file option
             // Next element is filename unless "-o" is the last argument
             if (i == nCmdLineArgs - 1) {
-                std::cerr << "[error] -o requires a filename argument"
-                          << std::endl;
-                // Set the flag to indicate the error and terminate the loop
-                processStatus = false;
-                break;
+                throw MissingArgument("-o requires an argument");
             } else {
                 // Got filename, so assign value and advance past it
                 settings.outputFile = cmdLineArgs[i + 1];
@@ -54,11 +47,7 @@ bool processCommandLine(const std::vector<std::string>& cmdLineArgs,
             // Handle cipher key option
             // Next element is the key unless -k is the last argument
             if (i == nCmdLineArgs - 1) {
-                std::cerr << "[error] -k requires a positive integer argument"
-                          << std::endl;
-                // Set the flag to indicate the error and terminate the loop
-                processStatus = false;
-                break;
+                throw MissingArgument("-k requires an argument");
             } else {
                 // Got the key, so assign the value and advance past it
                 settings.cipherKey = cmdLineArgs[i + 1];
@@ -72,11 +61,7 @@ bool processCommandLine(const std::vector<std::string>& cmdLineArgs,
             // Handle cipher type option
             // Next element is the name of the cipher, unless -c is the last argument
             if (i == nCmdLineArgs - 1) {
-                std::cerr << "[error] -c requires a string argument"
-                          << std::endl;
-                // Set the flag to indicate the error and terminate the loop
-                processStatus = false;
-                break;
+                throw MissingArgument("-c requires an arguments");
             } else {
                 // Got the cipher name, so assign the value and advance past it
                 if (cmdLineArgs[i + 1] == "caesar") {
@@ -86,20 +71,12 @@ bool processCommandLine(const std::vector<std::string>& cmdLineArgs,
                 } else if (cmdLineArgs[i + 1] == "vigenere") {
                     settings.cipherType = CipherType::Vigenere;
                 } else {
-                    std::cerr << "[error] unknown cipher '"
-                              << cmdLineArgs[i + 1] << "'\n";
-                    processStatus = false;
-                    break;
+                    throw UnknownArgument("Given cipher argument was not recognised");
                 }
                 ++i;
             }
         } else {
-            // Have encoutered an unknown flag, output an error message,
-            // set the flag to indicate the error and terminate the loop
-            std::cerr << "[error] unknown argument '" << cmdLineArgs[i]
-                      << "'\n";
-            processStatus = false;
-            break;
+            throw UnknownArgument("Encountered an unknown argument: " + cmdLineArgs[i]);
         }
     }
     return processStatus;

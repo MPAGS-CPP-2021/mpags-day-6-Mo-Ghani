@@ -16,6 +16,9 @@
 /**
  * \class CaesarCipher
  * \brief Encrypt or decrypt text using the Caesar cipher with the given key
+ * 
+ * \exception InvalidKey is thrown when the given key cannot be converted to an
+ *            unsigned long
  */
 class CaesarCipher : public Cipher {
   public:
