@@ -3,12 +3,16 @@
 #include "CipherType.hpp"
 #include "ProcessCommandLine.hpp"
 #include "TransformChar.hpp"
+#include "Exceptions.hpp"
 
+#include <exception>
 #include <cctype>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
+#include <future>
+#include <thread>
 
 int main(int argc, char* argv[])
 {
@@ -20,11 +24,17 @@ int main(int argc, char* argv[])
         false, false, "", "", "", CipherMode::Encrypt, CipherType::Caesar};
 
     // Process command line arguments
-    const bool cmdLineStatus{processCommandLine(cmdLineArgs, settings)};
-
     // Any failure in the argument processing means we can't continue
     // Use a non-zero return value to indicate failure
-    if (!cmdLineStatus) {
+    try {
+        processCommandLine(cmdLineArgs, settings);
+    }
+    catch (const MissingArgument& e ) {
+        std::cerr << "[error] Missing argument: " << e.what() << "\n";
+        return 1;
+    }
+    catch (const UnknownArgument& e ) {
+        std::cerr << "[error] " << e.what() << "\n";
         return 1;
     }
 
@@ -90,18 +100,59 @@ int main(int argc, char* argv[])
     }
 
     // Request construction of the appropriate cipher
-    auto cipher = cipherFactory(settings.cipherType, settings.cipherKey);
+    std::string outputText;
+    try {
 
-    // Check that the cipher was constructed successfully
-    if (!cipher) {
-        std::cerr << "[error] problem constructing requested cipher"
-                  << std::endl;
+        // set nThreads = 10
+        size_t nThreads = 10;
+        size_t subStrLength = inputText.size()/nThreads + 1;
+
+        auto cipher = cipherFactory(settings.cipherType, settings.cipherKey);
+        // Check that the cipher was constructed successfully
+        if (!cipher) {
+            std::cerr << "[error] problem constructing requested cipher"
+                      << std::endl;
+            return 1;
+        }
+
+        // lambda to apply cipher
+        auto applyTheCipher = [&] (const std::string inText, const CipherMode mode) {
+            return cipher->applyCipher(inText, mode);
+        };
+
+        std::vector<std::future< std::string>> futureVec = {};
+
+        std::string subStrInputText;
+        for (size_t t = 0; t < nThreads - 1; t++) {
+            subStrInputText = inputText.substr(t*subStrLength,
+                                                 subStrLength);
+
+            futureVec.push_back( std::async(std::launch::async, applyTheCipher,
+                                          subStrInputText, settings.cipherMode));
+        }
+
+        // wait for each thread to finish
+        std::future_status status{std::future_status::ready};
+        for (std::future<std::string>& fut : futureVec) {
+            do {
+                status = fut.wait_for(std::chrono::seconds(1));
+                if (status == std::future_status::timeout) {
+                    std::cout << "[main] waiting...\n";
+                }
+            } while (status != std::future_status::ready);
+        }
+
+        // concatenate results
+        for (std::future<std::string>& fut : futureVec) {
+            outputText += fut.get();
+        }
+    }
+    catch (const InvalidKey& e) {
+        std::cerr << "[error] problem encountered with given key:\n" 
+                  << e.what();
         return 1;
     }
-
-    // Run the cipher on the input text, specifying whether to encrypt/decrypt
-    const std::string outputText{cipher->applyCipher(inputText, settings.cipherMode)};
-
+    
     // Output the encrypted/decrypted text to stdout/file
     if (!settings.outputFile.empty()) {
         // Open the file and check that we can write to it

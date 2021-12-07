@@ -39,6 +39,11 @@ struct ProgramSettings {
  * \param cmdLineArgs the command-line arguments to be processed
  * \param settings the program settings to be modified based upon the arguments received
  * \return true if the arguments could be successfully parsed, false otherwise
+ * 
+ * \exception MissingArgument is thrown when an expected command-line argument is not
+ *            given
+ * \exception UnknowngArgument is thrown when an unexpected command-line argument is
+ *            given 
  */
 bool processCommandLine(const std::vector<std::string>& cmdLineArgs,
                         ProgramSettings& settings);
